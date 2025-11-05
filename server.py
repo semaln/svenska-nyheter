@@ -12,7 +12,7 @@ MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/')
 DATABASE_NAME = os.environ.get('DATABASE_NAME', 'swedish_news')
 COLLECTION_NAME = os.environ.get('COLLECTION_NAME', 'articles')
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
 
 # MongoDB connection
@@ -173,6 +173,10 @@ def health_check():
             'mongodb': 'disconnected'
         }), 500
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
+    
 if __name__ == '__main__':
     # Hämta port från miljövariabel (för Heroku, Railway, etc.)
     port = int(os.environ.get('PORT', 5000))
