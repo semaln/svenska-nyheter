@@ -6,36 +6,52 @@ import json
 from datetime import datetime
 from scheduler import NewsScheduler
 import os
+import logging
+import traceback
+
+# Konfigurera logging för att se alla fel
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Hämta konfiguration från miljövariabler eller config.py
 MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/')
 DATABASE_NAME = os.environ.get('DATABASE_NAME', 'swedish_news')
 COLLECTION_NAME = os.environ.get('COLLECTION_NAME', 'articles')
 
+logger.info(f"🔧 MONGODB_URI är satt till: {MONGODB_URI[:20]}...")  # Visa bara början av URI
+
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)
 
-# MongoDB connection
+# MongoDB connection med bättre felhantering
 try:
+    logger.info("🔗 Försöker ansluta till MongoDB...")
     client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
     # Testa anslutning
     client.admin.command('ping')
-    print("✅ MongoDB-anslutning lyckades!")
+    logger.info("✅ MongoDB-anslutning lyckades!")
+    
+    db = client[DATABASE_NAME]
+    collection = db[COLLECTION_NAME]
+    
 except Exception as e:
-    print(f"❌ MongoDB-anslutningsfel: {e}")
-    print("⚠️  Servern startar men databas-operationer kommer att misslyckas")
-
-db = client[DATABASE_NAME]
-collection = db[COLLECTION_NAME]
+    logger.error(f"❌ MongoDB-anslutningsfel: {e}")
+    logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
+    logger.error("⚠️  Servern startar men databas-operationer kommer att misslyckas")
+    # Sätt collection till None så vi kan kolla det senare
+    collection = None
 
 # Starta scheduler i bakgrunden (endast om inte i test-miljö)
 if not os.environ.get('TESTING'):
     try:
         scheduler = NewsScheduler()
         scheduler.start()
-        print("✅ Scheduler startad!")
+        logger.info("✅ Scheduler startad!")
     except Exception as e:
-        print(f"⚠️  Scheduler kunde inte startas: {e}")
+        logger.error(f"⚠️  Scheduler kunde inte startas: {e}")
 
 def parse_json(data):
     """Konvertera MongoDB ObjectId till JSON"""
@@ -46,10 +62,23 @@ def index():
     """Servera frontend"""
     return send_from_directory('static', 'index.html')
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Servera statiska filer"""
+    return send_from_directory('static', filename)
+
 @app.route('/api/articles', methods=['GET'])
 def get_articles():
     """Hämta artiklar med filtrering och paginering"""
     try:
+        # Kolla om MongoDB är anslutet
+        if collection is None:
+            logger.error("❌ MongoDB collection är None!")
+            return jsonify({
+                'error': 'Database not connected',
+                'message': 'MongoDB är inte ansluten. Kolla MONGODB_URI miljövariabel.'
+            }), 500
+        
         category = request.args.get('category')
         source = request.args.get('source')
         page = int(request.args.get('page', 1))
@@ -73,30 +102,68 @@ def get_articles():
             'total_pages': (total + per_page - 1) // per_page
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ Fel i /api/articles: {e}")
+        logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
+        return jsonify({
+            'error': str(e),
+            'message': 'Ett fel uppstod vid hämtning av artiklar'
+        }), 500
 
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
     """Hämta alla tillgängliga kategorier"""
     try:
+        if collection is None:
+            logger.error("❌ MongoDB collection är None!")
+            return jsonify({
+                'error': 'Database not connected',
+                'message': 'MongoDB är inte ansluten'
+            }), 500
+            
         categories = collection.distinct('category')
+        logger.info(f"✓ Hittade {len(categories)} kategorier")
         return jsonify({'categories': categories})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ Fel i /api/categories: {e}")
+        logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
+        return jsonify({
+            'error': str(e),
+            'message': 'Ett fel uppstod vid hämtning av kategorier'
+        }), 500
 
 @app.route('/api/sources', methods=['GET'])
 def get_sources():
     """Hämta alla tillgängliga källor"""
     try:
+        if collection is None:
+            logger.error("❌ MongoDB collection är None!")
+            return jsonify({
+                'error': 'Database not connected',
+                'message': 'MongoDB är inte ansluten'
+            }), 500
+            
         sources = collection.distinct('source')
+        logger.info(f"✓ Hittade {len(sources)} källor")
         return jsonify({'sources': sources})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ Fel i /api/sources: {e}")
+        logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
+        return jsonify({
+            'error': str(e),
+            'message': 'Ett fel uppstod vid hämtning av källor'
+        }), 500
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Hämta statistik om innehållet"""
     try:
+        if collection is None:
+            logger.error("❌ MongoDB collection är None!")
+            return jsonify({
+                'error': 'Database not connected',
+                'message': 'MongoDB är inte ansluten'
+            }), 500
+            
         total_articles = collection.count_documents({})
         
         pipeline = [
@@ -121,12 +188,23 @@ def get_stats():
             'last_update': last_update.isoformat() if last_update else None
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ Fel i /api/stats: {e}")
+        logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
+        return jsonify({
+            'error': str(e),
+            'message': 'Ett fel uppstod vid hämtning av statistik'
+        }), 500
 
 @app.route('/api/search', methods=['GET'])
 def search_articles():
     """Sök bland artiklar"""
     try:
+        if collection is None:
+            return jsonify({
+                'error': 'Database not connected',
+                'message': 'MongoDB är inte ansluten'
+            }), 500
+            
         query_text = request.args.get('q', '')
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
@@ -153,30 +231,49 @@ def search_articles():
             'query': query_text
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"❌ Fel i /api/search: {e}")
+        logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
+        return jsonify({
+            'error': str(e),
+            'message': 'Ett fel uppstod vid sökning'
+        }), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Kontrollera att API:et fungerar"""
     try:
         # Testa MongoDB-anslutning
+        if collection is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'MongoDB collection är None',
+                'mongodb': 'disconnected',
+                'mongodb_uri': MONGODB_URI[:20] + '...'
+            }), 500
+            
         client.admin.command('ping')
+        
+        # Räkna artiklar
+        article_count = collection.count_documents({})
+        
         return jsonify({
             'status': 'ok',
             'timestamp': datetime.now().isoformat(),
-            'mongodb': 'connected'
+            'mongodb': 'connected',
+            'articles': article_count,
+            'database': DATABASE_NAME,
+            'collection': COLLECTION_NAME
         })
     except Exception as e:
+        logger.error(f"❌ Health check misslyckades: {e}")
+        logger.error(f"❌ Fullständigt fel: {traceback.format_exc()}")
         return jsonify({
             'status': 'error',
             'message': str(e),
-            'mongodb': 'disconnected'
+            'mongodb': 'disconnected',
+            'mongodb_uri': MONGODB_URI[:20] + '...'
         }), 500
 
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory('static', filename)
-    
 if __name__ == '__main__':
     # Hämta port från miljövariabel (för Heroku, Railway, etc.)
     port = int(os.environ.get('PORT', 5000))
@@ -184,12 +281,13 @@ if __name__ == '__main__':
     # Debug-läge endast lokalt
     debug = os.environ.get('FLASK_ENV') != 'production'
     
-    print(f"""
+    logger.info(f"""
     ╔══════════════════════════════════════════════════╗
     ║     Svenska Nyheter - Flipboard Clone            ║
     ║                                                  ║
     ║  Server körs på: http://0.0.0.0:{port:<4}          ║
     ║  API: http://0.0.0.0:{port}/api/articles        ║
+    ║  MongoDB: {MONGODB_URI[:30]}...                   ║
     ║  Debug: {debug}                                    ║
     ║                                                  ║
     ║  Tryck Ctrl+C för att stoppa                    ║
@@ -201,4 +299,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         if 'scheduler' in locals():
             scheduler.stop()
-        print("\n✋ Server stoppad")
+        logger.info("\n✋ Server stoppad")
