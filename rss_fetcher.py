@@ -1,6 +1,6 @@
 import feedparser
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 from config import FEEDS, MONGODB_URI, DATABASE_NAME, COLLECTION_NAME
 
@@ -21,13 +21,24 @@ class RSSFetcher:
         return hashlib.md5(link.encode()).hexdigest()
     
     def parse_date(self, entry):
-        """Extrahera publiceringsdatum från RSS-entry"""
+        """
+        Extrahera publiceringsdatum från RSS-entry.
+        Ser till att datumet är "aware" och satt till UTC.
+        """
+        dt = None
         if hasattr(entry, 'published_parsed') and entry.published_parsed:
-            return datetime(*entry.published_parsed[:6])
+            # feedparser ger en UTC-baserad tuple. Skapa datetime-objekt med UTC-tidszon.
+            # <-- ÄNDRING 2: Lägg till tzinfo=timezone.utc
+            dt = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
         elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
-            return datetime(*entry.updated_parsed[:6])
+            # Samma sak för 'updated'
+            # <-- ÄNDRING 3: Lägg till tzinfo=timezone.utc
+            dt = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
         else:
-            return datetime.now()
+            # Fallback: använd nuvarande tid, men se till att den är UTC-medveten
+            # <-- ÄNDRING 4: Använd datetime.now(timezone.utc)
+            dt = datetime.now(timezone.utc)
+        return dt
     
     def extract_image(self, entry):
         """Försök extrahera bild-URL från RSS-entry"""
@@ -75,7 +86,7 @@ class RSSFetcher:
                     'source': feed_info['name'],
                     'category': feed_info['category'],
                     'image_url': self.extract_image(entry),
-                    'fetched_at': datetime.now()
+                    'fetched_at': datetime.now(timezone.utc)
                 }
                 
                 try:
@@ -95,7 +106,7 @@ class RSSFetcher:
     def fetch_all_feeds(self):
         """Hämta alla konfigurerade RSS-flöden"""
         print(f"\n{'='*50}")
-        print(f"Börjar hämta nyheter - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Börjar hämta nyheter - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')}")
         print(f"{'='*50}\n")
         
         total_new = 0
