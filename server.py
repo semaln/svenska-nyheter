@@ -3,7 +3,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from bson import json_util
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from scheduler import NewsScheduler
 import os
 import logging
@@ -55,7 +55,7 @@ if not os.environ.get('TESTING'):
 
 def parse_json(data):
     """Konvertera MongoDB ObjectId till JSON"""
-    return json.loads(json_util.dumps(data))
+    return json.loads(json_util.dumps(data, json_options=json_util.RELAXED_JSON_OPTIONS))
 
 @app.route('/')
 def index():
@@ -180,6 +180,10 @@ def get_stats():
         
         latest = collection.find_one(sort=[('fetched_at', -1)])
         last_update = latest['fetched_at'] if latest else None
+
+        if last_update and last_update.tzinfo is None:
+            # Antag att naiva datum från databasen är UTC och lägg till tidszonsinfo
+            last_update = last_update.replace(tzinfo=timezone.utc)
         
         return jsonify({
             'total_articles': total_articles,
@@ -258,7 +262,7 @@ def health_check():
         
         return jsonify({
             'status': 'ok',
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'mongodb': 'connected',
             'articles': article_count,
             'database': DATABASE_NAME,
@@ -285,12 +289,12 @@ if __name__ == '__main__':
     ╔══════════════════════════════════════════════════╗
     ║     Svenska Nyheter - Flipboard Clone            ║
     ║                                                  ║
-    ║  Server körs på: http://0.0.0.0:{port:<4}          ║
-    ║  API: http://0.0.0.0:{port}/api/articles        ║
-    ║  MongoDB: {MONGODB_URI[:30]}...                   ║
-    ║  Debug: {debug}                                    ║
+    ║  Server körs på: http://0.0.0.0:{port:<4}        ║
+    ║  API: http://0.0.0.0:{port}/api/articles         ║
+    ║  MongoDB: {MONGODB_URI[:30]}...                  ║
+    ║  Debug: {debug}                                  ║
     ║                                                  ║
-    ║  Tryck Ctrl+C för att stoppa                    ║
+    ║  Tryck Ctrl+C för att stoppa                     ║
     ╚══════════════════════════════════════════════════╝
     """)
     
