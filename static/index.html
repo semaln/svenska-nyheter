@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svenska Nyheter - Din personliga nyhetsaggregator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>📰 Svenska Nyheter</h1>
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Sök nyheter...">
+                </div>
+                <select id="categoryFilter">
+                    <option value="alla">Alla kategorier</option>
+                </select>
+                <select id="sourceFilter">
+                    <option value="">Alla källor</option>
+                </select>
+            </div>
+            <div class="stats">
+                <span>📊 <span id="totalArticles">0</span> artiklar</span>
+                <span>⏰ Senast uppdaterad: <span id="lastUpdate">-</span></span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            Laddar nyheter...
+        </div>
+        <div id="articlesGrid" class="grid"></div>
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
