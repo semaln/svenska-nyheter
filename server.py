@@ -84,10 +84,9 @@ def get_articles():
         MAX_ARTICLES = 100
         
         # Hämta de 100 senaste artikel-ID:na först
-        latest_articles = list(collection.find(query)
+        latest_articles = list(collection.find(query, {'_id': 1})
                               .sort('published_date', -1)
-                              .limit(MAX_ARTICLES)
-                              .projection({'_id': 1}))
+                              .limit(MAX_ARTICLES))
         
         latest_ids = [article['_id'] for article in latest_articles]
         total = min(len(latest_ids), MAX_ARTICLES)
@@ -173,10 +172,9 @@ def get_stats():
         MAX_ARTICLES = 100
         
         # Hämta de 100 senaste artikel-ID:na
-        latest_articles = list(collection.find()
+        latest_articles = list(collection.find({}, {'_id': 1})
                               .sort('published_date', -1)
-                              .limit(MAX_ARTICLES)
-                              .projection({'_id': 1}))
+                              .limit(MAX_ARTICLES))
         
         latest_ids = [article['_id'] for article in latest_articles]
         total_articles = len(latest_ids)
@@ -237,10 +235,9 @@ def search_articles():
         # Begränsa sökning till de 100 senaste artiklarna
         MAX_ARTICLES = 100
         
-        latest_articles = list(collection.find()
+        latest_articles = list(collection.find({}, {'_id': 1})
                               .sort('published_date', -1)
-                              .limit(MAX_ARTICLES)
-                              .projection({'_id': 1}))
+                              .limit(MAX_ARTICLES))
         
         latest_ids = [article['_id'] for article in latest_articles]
         
@@ -286,10 +283,9 @@ def health_check():
         
         # Räkna artiklar (från de 100 senaste)
         MAX_ARTICLES = 100
-        latest_articles = list(collection.find()
+        latest_articles = list(collection.find({}, {'_id': 1})
                               .sort('published_date', -1)
-                              .limit(MAX_ARTICLES)
-                              .projection({'_id': 1}))
+                              .limit(MAX_ARTICLES))
         article_count = len(latest_articles)
         
         return jsonify({
