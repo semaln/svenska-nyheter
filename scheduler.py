@@ -3,7 +3,7 @@ from rss_fetcher import RSSFetcher
 from config import FETCH_INTERVAL_MINUTES
 import logging
 
-# Sätt upp logging
+# SÃ¤tt upp logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -17,20 +17,20 @@ class NewsScheduler:
         self.fetcher = RSSFetcher()
     
     def fetch_news_job(self):
-        """Job som hämtar nyheter"""
+        """Job som hÃ¤mtar nyheter"""
         try:
-            logger.info("Startar automatisk nyhetshämtning...")
+            logger.info("Startar automatisk nyhetshÃ¤mtning...")
             new_articles = self.fetcher.fetch_all_feeds()
-            logger.info(f"Nyhetshämtning klar: {new_articles} nya artiklar")
+            logger.info(f"NyhetshÃ¤mtning klar: {new_articles} nya artiklar")
         except Exception as e:
-            logger.error(f"Fel vid nyhetshämtning: {str(e)}")
+            logger.error(f"Fel vid nyhetshÃ¤mtning: {str(e)}")
     
     def start(self):
         """Starta schedulern"""
-        # Kör jobbet direkt vid start
+        # KÃ¶r jobbet direkt vid start
         self.fetch_news_job()
         
-        # Schemalägg att köra jobbet var X:e minut
+        # SchemalÃ¤gg att kÃ¶ra jobbet var X:e minut
         self.scheduler.add_job(
             self.fetch_news_job,
             'interval',
@@ -40,7 +40,7 @@ class NewsScheduler:
         )
         
         self.scheduler.start()
-        logger.info(f"Scheduler startad - hämtar nyheter var {FETCH_INTERVAL_MINUTES}:e minut")
+        logger.info(f"Scheduler startad - hÃ¤mtar nyheter var {FETCH_INTERVAL_MINUTES}:e minut")
     
     def stop(self):
         """Stoppa schedulern"""
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     scheduler.start()
     
     try:
-        # Håll programmet igång
+        # HÃ¥ll programmet igÃ¥ng
         import time
         while True:
             time.sleep(1)

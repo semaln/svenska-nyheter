@@ -10,38 +10,39 @@ class RSSFetcher:
         self.db = self.client[DATABASE_NAME]
         self.collection = self.db[COLLECTION_NAME]
         
-        # Skapa index för snabbare sökningar
+        # Skapa index fÃ¶r snabbare sÃ¶kningar
         self.collection.create_index('article_id', unique=True)
         self.collection.create_index('published_date')
         self.collection.create_index('source')
         self.collection.create_index('category')
+        self.collection.create_index('priority')
     
     def generate_article_id(self, link):
-        """Generera unikt ID baserat på artikel-URL"""
+        """Generera unikt ID baserat pÃ¥ artikel-URL"""
         return hashlib.md5(link.encode()).hexdigest()
     
     def parse_date(self, entry):
         """
-        Extrahera publiceringsdatum från RSS-entry.
-        Ser till att datumet är "aware" och satt till UTC.
+        Extrahera publiceringsdatum frÃ¥n RSS-entry.
+        Ser till att datumet Ã¤r "aware" och satt till UTC.
         """
         dt = None
         if hasattr(entry, 'published_parsed') and entry.published_parsed:
             # feedparser ger en UTC-baserad tuple. Skapa datetime-objekt med UTC-tidszon.
-            # <-- ÄNDRING 2: Lägg till tzinfo=timezone.utc
+            # <-- Ã„NDRING 2: LÃ¤gg till tzinfo=timezone.utc
             dt = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
         elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
-            # Samma sak för 'updated'
-            # <-- ÄNDRING 3: Lägg till tzinfo=timezone.utc
+            # Samma sak fÃ¶r 'updated'
+            # <-- Ã„NDRING 3: LÃ¤gg till tzinfo=timezone.utc
             dt = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
         else:
-            # Fallback: använd nuvarande tid, men se till att den är UTC-medveten
-            # <-- ÄNDRING 4: Använd datetime.now(timezone.utc)
+            # Fallback: anvÃ¤nd nuvarande tid, men se till att den Ã¤r UTC-medveten
+            # <-- Ã„NDRING 4: AnvÃ¤nd datetime.now(timezone.utc)
             dt = datetime.now(timezone.utc)
         return dt
     
     def extract_image(self, entry):
-        """Försök extrahera bild-URL från RSS-entry"""
+        """FÃ¶rsÃ¶k extrahera bild-URL frÃ¥n RSS-entry"""
         # Kolla efter media:content eller media:thumbnail
         if hasattr(entry, 'media_content') and entry.media_content:
             return entry.media_content[0].get('url')
@@ -65,14 +66,14 @@ class RSSFetcher:
         return None
     
     def fetch_feed(self, feed_info):
-        """Hämta och bearbeta ett RSS-flöde"""
-        print(f"Hämtar: {feed_info['name']}...")
+        """HÃ¤mta och bearbeta ett RSS-flÃ¶de"""
+        print(f"HÃ¤mtar: {feed_info['name']}...")
         
         try:
             feed = feedparser.parse(feed_info['url'])
             
             if feed.bozo:
-                print(f"⚠️  Varning: Problem med {feed_info['name']}")
+                print(f"âš ï¸  Varning: Problem med {feed_info['name']}")
             
             new_articles = 0
             
@@ -85,6 +86,7 @@ class RSSFetcher:
                     'published_date': self.parse_date(entry),
                     'source': feed_info['name'],
                     'category': feed_info['category'],
+                    'priority': feed_info.get('priority', 3),
                     'image_url': self.extract_image(entry),
                     'fetched_at': datetime.now(timezone.utc)
                 }
@@ -96,17 +98,17 @@ class RSSFetcher:
                     # Artikel finns redan (duplicate key error)
                     pass
             
-            print(f"✓ {feed_info['name']}: {new_articles} nya artiklar")
+            print(f"âœ“ {feed_info['name']}: {new_articles} nya artiklar")
             return new_articles
             
         except Exception as e:
-            print(f"✗ Fel vid hämtning av {feed_info['name']}: {str(e)}")
+            print(f"âœ— Fel vid hÃ¤mtning av {feed_info['name']}: {str(e)}")
             return 0
     
     def fetch_all_feeds(self):
-        """Hämta alla konfigurerade RSS-flöden"""
+        """HÃ¤mta alla konfigurerade RSS-flÃ¶den"""
         print(f"\n{'='*50}")
-        print(f"Börjar hämta nyheter - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        print(f"BÃ¶rjar hÃ¤mta nyheter - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')}")
         print(f"{'='*50}\n")
         
         total_new = 0
@@ -120,7 +122,7 @@ class RSSFetcher:
         return total_new
     
     def get_recent_articles(self, limit=50, category=None):
-        """Hämta senaste artiklarna från databasen"""
+        """HÃ¤mta senaste artiklarna frÃ¥n databasen"""
         query = {}
         if category:
             query['category'] = category
@@ -129,14 +131,14 @@ class RSSFetcher:
         return list(articles)
     
     def get_categories(self):
-        """Hämta alla unika kategorier"""
+        """HÃ¤mta alla unika kategorier"""
         return self.collection.distinct('category')
     
     def get_sources(self):
-        """Hämta alla unika källor"""
+        """HÃ¤mta alla unika kÃ¤llor"""
         return self.collection.distinct('source')
 
 if __name__ == '__main__':
-    # Testa att hämta nyheter
+    # Testa att hÃ¤mta nyheter
     fetcher = RSSFetcher()
     fetcher.fetch_all_feeds()
