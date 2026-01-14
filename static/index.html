@@ -3,66 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Svenska Nyheter</title>
+    <title>AI Nyheter - Din personliga AI-nyhetsaggregator</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="header-top">
-                <h1 class="logo">Svenska Nyheter</h1>
-                <div class="header-stats">
-                    <span class="stat-item">
-                        <span class="stat-label">Artiklar</span>
-                        <span class="stat-value" id="totalArticles">0</span>
-                    </span>
-                    <span class="stat-divider"></span>
-                    <span class="stat-item">
-                        <span class="stat-label">Uppdaterad</span>
-                        <span class="stat-value" id="lastUpdate">-</span>
-                    </span>
-                </div>
-            </div>
-            
+            <h1>🤖 AI Nyheter</h1>
             <div class="controls">
                 <div class="search-box">
-                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                    <input type="text" id="searchInput" placeholder="Sök nyheter...">
+                    <input type="text" id="searchInput" placeholder="Sök AI-nyheter...">
                 </div>
-                
-                <select id="categoryFilter" class="filter-select">
+                <select id="categoryFilter">
                     <option value="alla">Alla kategorier</option>
                 </select>
-                
-                <select id="sourceFilter" class="filter-select">
+                <select id="sourceFilter">
                     <option value="">Alla källor</option>
                 </select>
+            </div>
+            <div class="stats">
+                <span>📊 <span id="totalArticles">0</span> artiklar</span>
+                <span>⏰ Senast uppdaterad: <span id="lastUpdate">-</span></span>
             </div>
         </div>
     </header>
 
-    <main class="container">
+    <div class="container">
         <div id="loading" class="loading" style="display: none;">
             <div class="spinner"></div>
-            <p>Laddar nyheter...</p>
+            Laddar nyheter...
         </div>
-        
         <div id="articlesGrid" class="grid"></div>
-        
         <div id="pagination" class="pagination"></div>
-    </main>
-
-    <footer class="footer">
-        <div class="footer-content">
-            <p>&copy; 2025 Svenska Nyheter. Aggregerar nyheter från ledande svenska medier.</p>
-        </div>
-    </footer>
+    </div>
 
     <script src="/static/app.js"></script>
 </body>

@@ -5,7 +5,7 @@ let currentSource = '';
 let searchQuery = '';
 let totalPages = 1;
 
-// Ladda kategorier och källor
+// Ladda kategorier och kÃ¤llor
 async function loadFilters() {
     try {
         const [categories, sources] = await Promise.all([
@@ -41,25 +41,7 @@ async function loadStats() {
         
         if (stats.last_update) {
             const date = new Date(stats.last_update);
-            const now = new Date();
-            const diffMinutes = Math.floor((now - date) / (1000 * 60));
-            
-            let updateText;
-            if (diffMinutes < 1) {
-                updateText = 'Just nu';
-            } else if (diffMinutes < 60) {
-                updateText = `${diffMinutes} min sedan`;
-            } else if (diffMinutes < 1440) {
-                const hours = Math.floor(diffMinutes / 60);
-                updateText = `${hours}h sedan`;
-            } else {
-                updateText = date.toLocaleDateString('sv-SE', { 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
-            }
-            
-            document.getElementById('lastUpdate').textContent = updateText;
+            document.getElementById('lastUpdate').textContent = date.toLocaleString('sv-SE');
         }
     } catch (error) {
         console.error('Fel vid laddning av statistik:', error);
@@ -93,19 +75,15 @@ async function loadArticles() {
         
         totalPages = data.total_pages;
         
-        if (data.articles.length === 0) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-muted);"><p style="font-size: 16px; margin-bottom: 8px;">Inga artiklar hittades</p><p style="font-size: 14px;">Prova att ändra filter eller sökning</p></div>';
-        } else {
-            data.articles.forEach(article => {
-                const card = createArticleCard(article);
-                grid.appendChild(card);
-            });
-        }
+        data.articles.forEach(article => {
+            const card = createArticleCard(article);
+            grid.appendChild(card);
+        });
 
         renderPagination();
     } catch (error) {
         console.error('Fel vid laddning av artiklar:', error);
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-muted);"><p>Ett fel uppstod vid laddning av artiklar.</p></div>';
+        grid.innerHTML = '<p>Ett fel uppstod vid laddning av artiklar.</p>';
     } finally {
         loading.style.display = 'none';
     }
@@ -122,9 +100,9 @@ function createArticleCard(article) {
 
     card.innerHTML = `
         ${article.image_url 
-            ? `<img class="article-image" src="${article.image_url}" alt="${article.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" loading="lazy">`
+            ? `<img class="article-image" src="${article.image_url}" alt="${article.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
             : ''}
-        <div class="no-image" style="${article.image_url ? 'display:none' : ''}">N</div>
+        <div class="article-image no-image" style="${article.image_url ? 'display:none' : ''}">ðŸ“„</div>
         <div class="article-content">
             <div class="article-meta">
                 <span class="source">${article.source}</span>
@@ -139,27 +117,23 @@ function createArticleCard(article) {
     return card;
 }
 
-// Ta bort HTML-taggar från text
+// Ta bort HTML-taggar frÃ¥n text
 function stripHtml(html) {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || '';
 }
 
-// Beräkna tid sedan publicering
+// BerÃ¤kna tid sedan publicering
 function getTimeAgo(date) {
     const seconds = Math.floor((new Date() - date) / 1000);
     
     if (seconds < 60) return 'Just nu';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} min sedan`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h sedan`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minuter sedan`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} timmar sedan`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)} dagar sedan`;
     
-    return date.toLocaleDateString('sv-SE', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
+    return date.toLocaleDateString('sv-SE');
 }
 
 // Rendera paginering
@@ -170,13 +144,13 @@ function renderPagination() {
     if (totalPages <= 1) return;
 
     const prevBtn = document.createElement('button');
-    prevBtn.textContent = '← Föregående';
+    prevBtn.textContent = 'â† FÃ¶regÃ¥ende';
     prevBtn.disabled = currentPage === 1;
     prevBtn.onclick = () => {
         if (currentPage > 1) {
             currentPage--;
             loadArticles();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo(0, 0);
         }
     };
     pagination.appendChild(prevBtn);
@@ -188,13 +162,13 @@ function renderPagination() {
     pagination.appendChild(pageInfo);
 
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'Nästa →';
+    nextBtn.textContent = 'NÃ¤sta â†’';
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.onclick = () => {
         if (currentPage < totalPages) {
             currentPage++;
             loadArticles();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo(0, 0);
         }
     };
     pagination.appendChild(nextBtn);
@@ -226,8 +200,6 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
         if (searchQuery) {
             currentCategory = 'alla';
             currentSource = '';
-            document.getElementById('categoryFilter').value = 'alla';
-            document.getElementById('sourceFilter').value = '';
         }
         loadArticles();
     }, 500);
